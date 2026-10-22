@@ -10,7 +10,8 @@
 // Env: PORT (8090), BIND (127.0.0.1), APP_PASSWORD (asks for it in the browser; user name is ignored),
 //      GEMINI_API_KEY, GEMINI_MODEL (gemini-2.5-flash), GEMINI_API_BASE (Google's endpoint; for a proxy/gateway), GEMINI_LIMIT (requests per 10 min per address, 40),
 //      VLC_PASSWORD (turns the VLC relay on), VLC_HOST (127.0.0.1), VLC_PORT (8080),
-//      ALLOW_ORIGIN (another origin allowed to call /vlc, e.g. where you host index.html).
+//      ALLOW_ORIGIN (another origin allowed to call /vlc, e.g. where you host index.html),
+//      TRUST_PROXY (set behind a hosting proxy such as Render, so limits use the visitor's address).
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
@@ -30,6 +31,7 @@ const VLC = `http://${env.VLC_HOST || '127.0.0.1'}:${+env.VLC_PORT || 8080}`;
 const VLC_ON = 'VLC_PASSWORD' in env;
 const VLC_AUTH = 'Basic ' + Buffer.from(':' + (env.VLC_PASSWORD || '')).toString('base64');
 const ALLOW_ORIGIN = env.ALLOW_ORIGIN || '';
+const TRUST_PROXY = /^(1|true|yes)$/i.test(env.TRUST_PROXY || '');
 
 const FILES = {
   '/': ['index.html', 'text/html; charset=utf-8', 'no-cache'],
@@ -77,7 +79,7 @@ async function body(req, limit = 4096) {
 async function gemini(req, res) {
   if (!GEMINI_KEY) return send(res, 404, { error: 'This server has no Gemini key.' });
   if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
-  const ip = req.socket.remoteAddress, now = Date.now();
+  const ip = (TRUST_PROXY && String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()) || req.socket.remoteAddress, now = Date.now();
   const recent = (hits.get(ip) || []).filter(t => now - t < 6e5);
   if (recent.length >= GEMINI_LIMIT) return send(res, 429, { error: 'Too many questions in the last 10 minutes. Try again shortly.' });
   hits.set(ip, [...recent, now]);

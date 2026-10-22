@@ -91,6 +91,28 @@ CORS headers. It only relays the remote-control commands the app uses, only
 lets VLC open network links (never local files), and refuses requests whose
 Host header isn't an IP address or localhost.
 
+## Host it on Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/elrity/Flash2Svg)
+
+The repository has a Render Blueprint (`render.yaml` at the root):
+
+1. In Render: **New → Blueprint**, connect GitHub and choose `elrity/Flash2Svg`
+   (until the pull request is merged, pick the branch
+   `claude/web-video-caster-app-uebeye`).
+2. Fill in the two secrets Render asks for:
+   - `APP_PASSWORD`: the password the browser will ask for. Set one: the app
+     is on the public internet and otherwise anyone could use your Gemini key.
+   - `GEMINI_API_KEY`: from aistudio.google.com/apikey (optional).
+3. **Apply**. After the first build, open `https://streambeam-<…>.onrender.com`
+   and choose *Install* / *Add to Home Screen*. HTTPS is automatic, so
+   installing, shortcuts and screen mirroring all work.
+
+Notes: the free plan sleeps after 15 minutes without visits, so the first
+visit after that takes up to a minute. Pushes that change `web-video-caster/`
+redeploy automatically. Cast to VLC needs VLC on the same network as the
+server, so use a home computer for that, not Render.
+
 ## Run it in production
 
 Needs Node 18+ (no packages) or Docker.
@@ -127,6 +149,7 @@ docker run -d --restart unless-stopped -p 8090:8090 \
 | `GEMINI_API_BASE` | Google's endpoint | For an API proxy or gateway |
 | `VLC_PASSWORD`, `VLC_HOST`, `VLC_PORT` | relay off | Turns on Cast to VLC |
 | `ALLOW_ORIGIN` | – | Lets the app hosted elsewhere call `/vlc` |
+| `TRUST_PROXY` | off | Behind a hosting proxy (Render, Fly, Nginx): limit Gemini per visitor, not per proxy |
 
 **Install it as an app**: open the server's address in Chrome, Edge or
 Safari and choose *Install* / *Add to Home Screen*. Long-press the icon for
