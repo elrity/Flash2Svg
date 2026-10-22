@@ -210,6 +210,29 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
 .switch input:checked + i::after { transform: translateX(18px); }
 .switch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Mirror */
+.mirror { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+.screen video.mv { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.mirror-idle { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 6%; text-align: center; color: #c9d2df; background: radial-gradient(circle at 50% 40%, #1d2633, #05070a 70%); }
+.mirror-idle svg.i { width: 40px; height: 40px; color: #8d98aa; }
+.mirror-idle b { color: #fff; font: 700 17px/1.3 var(--f-body); }
+.mirror-idle span { font-size: 13px; max-width: 40ch; }
+.rec-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--bad); animation: blink 1.4s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+.status { display: inline-flex; align-items: center; gap: 8px; font: 600 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; }
+.status.live { color: var(--bad); }
+.status.ready { color: var(--muted); }
+.notice.bad { border-left-color: var(--bad); }
+.guide { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.guide article { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.guide article.yours { border-color: var(--accent); }
+.guide h3 { margin: 0; display: flex; align-items: center; gap: 8px; font: 700 15px/1.3 var(--f-body); }
+.guide h3 .chip { margin-left: auto; color: var(--accent); border-color: var(--accent); }
+.guide ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13.5px; }
+.guide ol b { color: var(--fg); font-weight: 600; }
+.guide .works { font: 11.5px/1.45 var(--f-mono); color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+kbd { font: 600 11.5px/1 var(--f-mono); padding: 2px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--panel-2); color: var(--fg); }
+
 /* Mini remote */
 .mini { grid-area: mini; display: flex; align-items: center; gap: 14px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-top: 1px solid var(--line); background: var(--panel); position: relative; }
 .mini .bar { position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: var(--line); }
@@ -244,7 +267,7 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
 .toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 50; padding: 10px 16px; border-radius: 8px; background: var(--fg); color: var(--bg); font-weight: 600; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
 
 @media (max-width: 860px) {
-  .np { grid-template-columns: minmax(0,1fr); }
+  .np, .mirror { grid-template-columns: minmax(0,1fr); }
 }
 @media (max-width: 760px) {
   .app { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr) auto auto; grid-template-areas: "top" "main" "mini" "nav"; }
@@ -299,6 +322,7 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
     <symbol id="i-air" viewBox="0 0 24 24"><path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/><path d="M12 15l5 6H7z"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-mirror" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4M9 10.5l3-3 3 3M12 7.5v6"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.8-4M4 4v4h4M4 13a8 8 0 0 0 14.8 4M20 20v-4h-4"/></symbol>
   </defs>
 </svg>
@@ -314,6 +338,7 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
   <nav class="nav" id="nav" aria-label="Sections">
     <button data-view="browser"><svg class="i"><use href="#i-globe"/></svg>Browser</button>
     <button data-view="player"><svg class="i"><use href="#i-cast"/></svg>Remote</button>
+    <button data-view="mirror"><svg class="i"><use href="#i-mirror"/></svg>Mirror</button>
     <button data-view="queue"><svg class="i"><use href="#i-list"/></svg>Queue<span class="badge" id="qBadge">0</span></button>
     <div class="sep"></div>
     <button data-view="local"><svg class="i"><use href="#i-folder"/></svg>Local files</button>
@@ -330,6 +355,7 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
 </div>
 
 <video id="video" playsinline crossorigin="anonymous" hidden></video>
+<style>body > video { display: none; }</style>
 <input type="file" id="subFile" accept=".srt,.vtt" hidden>
 <div class="scrim" id="scrim" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -469,6 +495,7 @@ video.addEventListener('error', () => { P.real = false; renderScreen(); });
 video.addEventListener('ended', () => onEnded());
 
 function playItem(item, opts = {}) {
+  if (M.stream) stopMirror();
   const it = { ...item, id: item.id || uid() };
   const resume = S.settings.resume ? (S.history.find(h => h.url === it.url)?.pos || 0) : 0;
   load(it, opts.from ?? (resume > 5 && resume < (it.duration || Infinity) - 10 ? resume : 0));
@@ -548,6 +575,86 @@ function promptRemote() {
   if (!video.remote || !video.src) { toast('This browser can’t reach nearby screens. Pick another device.'); return; }
   video.remote.prompt().catch(err => toast(err.name === 'NotSupportedError' ? 'This video can’t be sent to a nearby screen' : 'No screen selected'));
 }
+
+/* ---------- Screen mirroring ----------
+   Captures a screen, window or tab with getDisplayMedia and shows it on the receiver.
+   Real TVs are reached through the OS / browser mirroring described in GUIDES. */
+const mvid = document.createElement('video');
+mvid.muted = true; mvid.autoplay = true; mvid.playsInline = true; mvid.className = 'mv';
+document.body.appendChild(mvid);
+const M = Object.assign({ surface: 'monitor', quality: '1080', fps: 30, audio: true }, store.get('mirror', {}), { stream: null, at: 0, error: null });
+const canCapture = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+const saveMirror = () => store.set('mirror', { surface: M.surface, quality: M.quality, fps: M.fps, audio: M.audio });
+
+async function startMirror() {
+  M.error = null;
+  if (!canCapture) {
+    M.error = 'This browser can’t capture the screen. Phones and tablets don’t allow it from a web page, so use the built-in mirroring steps below.';
+    return render();
+  }
+  const h = +M.quality;
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: M.surface, height: { ideal: h }, width: { ideal: Math.round(h * 16 / 9) }, frameRate: { ideal: M.fps, max: M.fps } },
+      audio: M.audio, selfBrowserSurface: 'exclude', surfaceSwitching: 'include', systemAudio: 'include'
+    });
+    if (P.item) { logHistory(); P.playing = false; if (P.real) video.pause(); }
+    M.stream = stream; M.at = Date.now();
+    stream.getVideoTracks()[0].addEventListener('ended', () => stopMirror());
+    mvid.srcObject = stream; mvid.play().catch(() => {});
+    if (!S.device) openDevices();
+    toast(`Mirroring to ${devName()}`);
+  } catch (err) {
+    M.error = err.name === 'NotAllowedError'
+      ? 'Screen sharing didn’t start. Either the picker was cancelled, or this page is shown inside a frame that blocks screen capture (such as an embedded preview). Open the app directly in Chrome, Edge or Firefox, or use the built-in mirroring steps below.'
+      : err.name === 'NotFoundError' ? 'No screen, window or tab was available to share.'
+      : 'Screen sharing failed (' + err.name + '). Try a lower quality or frame rate.';
+  }
+  render();
+}
+function stopMirror() {
+  if (!M.stream) return;
+  M.stream.getTracks().forEach(t => t.stop());
+  M.stream = null; mvid.srcObject = null;
+  toast('Mirroring stopped'); render();
+}
+setInterval(() => {
+  if (!M.stream) return;
+  const el = fmt((Date.now() - M.at) / 1000);
+  const tr = M.stream.getVideoTracks()[0], st = tr ? tr.getSettings() : {};
+  const info = st.width ? `${st.width}×${st.height} · ${Math.round(st.frameRate || M.fps)} fps${M.stream.getAudioTracks().length ? ' · audio' : ''}` : 'Starting…';
+  [['#mTime', el], ['#mTime2', el], ['#mMini', el], ['#mStats', info]].forEach(([s, v]) => { const n = $(s); if (n) n.textContent = v; });
+}, 500);
+
+const UA = navigator.userAgent;
+const PLATFORM = /Android/i.test(UA) ? 'android' : (/iPhone|iPad|iPod/i.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1)) ? 'ios' : /Mac/i.test(UA) ? 'mac' : /Windows/i.test(UA) ? 'windows' : 'other';
+const BROWSER = /Edg\//.test(UA) ? 'edge' : /Chrome\//.test(UA) ? 'chrome' : 'other';
+const GUIDES = [
+  { id: 'chrome', title: 'Chrome on a computer', icon: 'chrome', you: BROWSER === 'chrome' && PLATFORM !== 'android',
+    steps: ['Open the <b>⋮</b> menu → <b>Cast, save, and share</b> → <b>Cast…</b>', 'Open <b>Sources</b> and pick <b>Cast screen</b> (or <b>Cast tab</b>)', 'Choose your TV'],
+    works: 'Chromecast, Google TV, Android TV, Nest Hub' },
+  { id: 'edge', title: 'Microsoft Edge', icon: 'globe', you: BROWSER === 'edge',
+    steps: ['Open the <b>⋯</b> menu → <b>More tools</b> → <b>Cast media to device</b>', 'Open <b>Sources</b> and pick <b>Cast desktop</b> or the tab', 'Choose your TV'],
+    works: 'Chromecast, Google TV, Android TV' },
+  { id: 'windows', title: 'Windows', icon: 'dlna', you: PLATFORM === 'windows',
+    steps: ['Press <kbd>Win</kbd> + <kbd>K</kbd>', 'Pick your TV from the list of wireless displays', 'Choose <b>Duplicate</b> or <b>Extend</b> with <kbd>Win</kbd> + <kbd>P</kbd>'],
+    works: 'Miracast: Fire TV, Roku, most Samsung and LG TVs, wireless display adapters' },
+  { id: 'mac', title: 'Mac', icon: 'air', you: PLATFORM === 'mac',
+    steps: ['Open <b>Control Center</b> in the menu bar', 'Click <b>Screen Mirroring</b>', 'Choose your Apple TV or AirPlay TV'],
+    works: 'AirPlay: Apple TV, many Samsung, LG, Sony, Vizio and Roku TVs' },
+  { id: 'ios', title: 'iPhone and iPad', icon: 'phone', you: PLATFORM === 'ios',
+    steps: ['Open <b>Control Center</b>', 'Tap <b>Screen Mirroring</b>', 'Choose your Apple TV or AirPlay TV'],
+    works: 'AirPlay: Apple TV, many Samsung, LG, Sony, Vizio and Roku TVs' },
+  { id: 'android', title: 'Android phone or tablet', icon: 'phone', you: PLATFORM === 'android',
+    steps: ['Swipe down twice to open <b>Quick Settings</b>', 'Tap <b>Screen Cast</b>, <b>Cast</b> or <b>Smart View</b> (Samsung)', 'Choose your TV. Or use the Google Home app → your device → <b>Cast my screen</b>'],
+    works: 'Chromecast, Google TV, Samsung and other Miracast TVs' },
+  { id: 'roku', title: 'Get a Roku ready', icon: 'roku', you: false,
+    steps: ['On the Roku: <b>Settings</b> → <b>System</b> → <b>Screen mirroring</b>', 'Set mode to <b>Prompt</b> or <b>Always allow</b>', 'Mirror from Windows (<kbd>Win</kbd> + <kbd>K</kbd>), Android, or AirPlay'],
+    works: 'Roku players and Roku TVs' },
+  { id: 'fire', title: 'Get a Fire TV ready', icon: 'fire', you: false,
+    steps: ['Press and hold <b>Home</b> on the remote', 'Select <b>Mirroring</b>', 'Mirror from Windows (<kbd>Win</kbd> + <kbd>K</kbd>) or Android'],
+    works: 'Fire TV Stick, Fire TV Cube, Fire TV Edition TVs' }
+].sort((a, b) => b.you - a.you);
 
 /* ---------- Sniffer ---------- */
 const MEDIA_RE = /(?:https?:)?\/\/[^\s"'<>()]+?\.(?:mp4|m4v|webm|mov|mkv|m3u8|mpd|mp3|m4a)(?:\?[^\s"'<>()]*)?/gi;
@@ -650,6 +757,7 @@ const views = {
     const pct = !P.live && P.dur ? P.pos / P.dur * 100 : 0;
     return `<div class="view-head"><div class="grow"><div class="eyebrow">${dev ? 'Casting to ' + esc(dev.name) : 'Not connected'}</div><h1>Remote</h1></div>
       <button class="btn" data-act="devices">${icon('cast')}${dev ? 'Change screen' : 'Connect'}</button></div>
+    ${M.stream ? `<div class="notice bad" style="margin:0">Your screen is being mirrored. Playing a video stops the mirror. <button class="btn ghost sm" data-act="openMirror">Go to mirroring</button></div>` : ''}
     <div class="np">
       <div class="tv"><div class="screen ${it ? '' : 'idle'}" id="screen"></div>
         <div class="tv-foot"><span>${dev ? icon(dev.icon) + ' ' + esc(dev.kind) : 'No screen connected'}</span><span class="mono" id="srcState"></span></div></div>
@@ -678,6 +786,41 @@ const views = {
         ${S.queue.length ? `<div class="meta" style="border-top:1px solid var(--line);padding-top:12px"><div class="eyebrow">Up next</div><div class="t" style="margin-top:6px">${esc(S.queue[0].title)}</div><div class="s">${S.queue.length} in queue · Autoplay ${S.settings.autoplay ? 'on' : 'off'}</div></div>` : ''}
       </div>
     </div>`;
+  },
+
+  mirror() {
+    const dev = DEVICES.find(d => d.id === S.device);
+    const live = !!M.stream;
+    const sel = (id, label, opts, cur) => `<div class="knob"><label for="${id}">${label}</label><select id="${id}" ${live ? 'disabled' : ''}>${opts.map(([v, t]) => `<option value="${v}" ${String(v) === String(cur) ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
+    const note = !dev ? 'Connect a screen to send the mirror to.'
+      : dev.real ? 'Nearby screens can’t take a mirror straight from a web page. Use your browser’s Cast screen option below to put it on the TV.'
+      : 'Demo receiver: the mirror shows in this preview. For a real TV, use the built-in mirroring steps below.';
+    return `<div class="view-head"><div class="grow"><div class="eyebrow">Screen mirroring</div><h1>Mirror your screen</h1>
+      <p>Show your whole screen, one window or a browser tab on the TV. Use it for slides, photos, games and sites that can’t be cast.</p></div></div>
+    <div class="mirror">
+      <div class="tv"><div class="screen" id="mscreen"></div>
+        <div class="tv-foot"><span>${dev ? icon(dev.icon) + ' ' + esc(dev.name) : 'No screen connected'}</span><span class="mono" id="mStats">${live ? '' : canCapture ? 'Ready' : 'Not supported here'}</span></div></div>
+      <div class="panel remote">
+        <div><span class="status ${live ? 'live' : 'ready'}">${live ? '<span class="rec-dot"></span>Live · <span id="mTime">0:00</span>' : 'Not mirroring'}</span>
+          <div class="title" style="margin-top:6px">${dev ? 'To ' + esc(dev.name) : 'No screen selected'}</div>
+          <p class="muted" style="margin:4px 0 0;font-size:13.5px">${note}</p></div>
+        <div class="knobs">
+          ${sel('m-surface', 'Share', [['monitor', 'Entire screen'], ['window', 'A window'], ['browser', 'A browser tab']], M.surface)}
+          ${sel('m-quality', 'Quality', [['720', '720p'], ['1080', '1080p'], ['1440', '1440p']], M.quality)}
+          ${sel('m-fps', 'Frame rate', [[15, '15 fps · docs'], [30, '30 fps · video'], [60, '60 fps · games']], M.fps)}
+          <div class="knob"><label for="m-audio">Sound</label><label style="display:flex;align-items:center;gap:8px;font-weight:600"><span class="switch"><input type="checkbox" id="m-audio" ${M.audio ? 'checked' : ''} ${live ? 'disabled' : ''}><i></i></span>${M.audio ? 'On' : 'Off'}</label></div>
+        </div>
+        ${live ? `<button class="btn" data-act="stopMirror" style="padding:12px">${icon('stop')}Stop mirroring</button>`
+               : `<button class="btn primary" data-act="startMirror" style="padding:12px">${icon('mirror')}Start mirroring</button>`}
+        ${dev ? '' : `<button class="btn ghost" data-act="devices">${icon('cast')}Connect a screen</button>`}
+      </div>
+    </div>
+    ${M.error ? `<div class="notice bad" style="margin:0">${esc(M.error)}</div>` : ''}
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <div><div class="eyebrow">Built-in mirroring</div><p class="muted" style="margin:6px 0 0;max-width:65ch">Every phone and computer can mirror to a TV on its own. These steps work with any real TV on your Wi-Fi${GUIDES[0].you ? ', and the one marked “This device” fits what you’re using now' : ''}.</p></div>
+      <div class="guide">${GUIDES.map(g => `<article class="${g.you ? 'yours' : ''}"><h3>${icon(g.icon)}${esc(g.title)}${g.you ? '<span class="chip">This device</span>' : ''}</h3>
+        <ol>${g.steps.map(x => `<li>${x}</li>`).join('')}</ol><div class="works">${esc(g.works)}</div></article>`).join('')}</div>
+    </section>`;
   },
 
   queue() {
@@ -770,6 +913,17 @@ function renderScreen() {
   tick(true);
 }
 
+function renderMirrorScreen() {
+  const el = $('#mscreen'); if (!el) return;
+  if (!M.stream) {
+    el.innerHTML = `<div class="mirror-idle">${icon('mirror')}<b>${canCapture ? 'Nothing shared yet' : 'Screen capture isn’t available'}</b><span>${canCapture ? 'Press Start mirroring, then pick a screen, window or tab.' : 'This browser can’t capture the screen. Use the built-in mirroring steps below.'}</span></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="osd"><span class="rec"><span class="rec-dot"></span>MIRROR · ${esc(devName())}</span><span id="mTime2"></span></div>`;
+  el.insertBefore(mvid, el.firstChild);
+  mvid.play().catch(() => {});
+}
+
 function tick(full) {
   const pct = !P.live && P.dur ? Math.min(100, P.pos / P.dur * 100) : (P.item ? 100 : 0);
   const bar = $('#miniBar'); if (bar) bar.style.width = pct + '%';
@@ -792,6 +946,12 @@ function tick(full) {
 function renderMini() {
   const m = $('#mini');
   const it = P.item;
+  if (M.stream) {
+    m.innerHTML = `<div class="bar"><i style="width:100%;background:var(--bad)"></i></div><span class="rec-dot"></span>
+      <div class="meta" data-act="openMirror"><div class="t">Mirroring your screen</div><div class="s"><span class="mono" id="mMini">${fmt((Date.now() - M.at) / 1000)}</span><span>· ${esc(devName())}</span></div></div>
+      <div class="ctl"><button class="btn sm" data-act="stopMirror">${icon('stop')}Stop</button></div>`;
+    return;
+  }
   if (!it) {
     m.innerHTML = `<div class="bar"><i id="miniBar"></i></div><div class="meta"><div class="t muted" style="font-weight:600">${S.device ? 'Connected to ' + esc(devName()) : 'Not connected'}</div><div class="s">Nothing playing${S.queue.length ? ' · ' + S.queue.length + ' in queue' : ''}</div></div>
       <div class="ctl">${S.queue.length ? `<button class="btn primary sm" data-act="next">${icon('play')}Play queue</button>` : ''}</div>`;
@@ -813,8 +973,10 @@ function render() {
   $('#castLabel').textContent = dev ? dev.name : 'Not connected';
   $('#castBtn').classList.toggle('on', !!dev);
   if (video.parentNode !== document.body) document.body.appendChild(video);
+  if (mvid.parentNode !== document.body) document.body.appendChild(mvid);
   main.innerHTML = `<div class="view">${views[S.view]()}</div>`;
   if (S.view === 'player') renderScreen();
+  if (S.view === 'mirror') renderMirrorScreen();
   renderMini();
 }
 
@@ -832,7 +994,7 @@ function drawDevices() {
     <div class="scan"><span class="radar ${S.scanning ? 'on' : ''}"></span>${S.scanning ? 'Looking for screens on your Wi-Fi…' : `${list.length} screens found on your network`}</div>
     ${shown.map(d => `<button class="dev ${d.id === S.device ? 'on' : ''}" data-dev="${d.id}"><span class="ico">${icon(d.icon)}</span><span class="dm"><b>${esc(d.name)}</b><span>${esc(d.kind)}${d.real ? '' : ' · demo'}</span></span>${d.id === S.device ? '<span class="state">CONNECTED</span>' : ''}</button>`).join('')}
     <button class="dev ${!S.device ? 'on' : ''}" data-dev=""><span class="ico">${icon('phone')}</span><span class="dm"><b>Play on this device</b><span>Watch here instead of casting</span></span></button>
-    <footer><button class="btn ghost" data-act="rescan">${icon('refresh')}Scan again</button>${S.device ? `<button class="btn" data-act="disconnect">Disconnect</button>` : ''}</footer></div>`;
+    <footer><button class="btn" data-act="mirrorFromSheet">${icon('mirror')}Mirror screen</button><div style="flex:1"></div><button class="btn ghost" data-act="rescan">${icon('refresh')}Scan again</button>${S.device ? `<button class="btn" data-act="disconnect">Disconnect</button>` : ''}</footer></div>`;
   scrim.querySelector('.dev')?.focus();
 }
 scrim.addEventListener('click', e => {
@@ -840,6 +1002,7 @@ scrim.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.act === 'closeDev') scrim.hidden = true;
   else if (b.dataset.act === 'rescan') openDevices();
+  else if (b.dataset.act === 'mirrorFromSheet') { scrim.hidden = true; S.view = 'mirror'; render(); }
   else if (b.dataset.act === 'disconnect') { S.device = ''; save(); scrim.hidden = true; toast('Disconnected'); render(); }
   else if ('dev' in b.dataset) {
     S.device = b.dataset.dev; save(); scrim.hidden = true;
@@ -901,6 +1064,9 @@ document.addEventListener('click', async e => {
     case 'subs': if (P.subName) { P.subs = null; P.subName = ''; render(); } else $('#subFile').click(); break;
     case 'devices': openDevices(); break;
     case 'openPlayer': S.view = 'player'; render(); break;
+    case 'openMirror': S.view = 'mirror'; render(); break;
+    case 'startMirror': startMirror(); break;
+    case 'stopMirror': stopMirror(); break;
     case 'bookmark': {
       const i = S.bookmarks.findIndex(x => x.url === S.url);
       if (i >= 0) { S.bookmarks.splice(i, 1); toast('Bookmark removed'); }
@@ -926,6 +1092,11 @@ document.addEventListener('input', e => {
 document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'seek') seek(+t.value);
+  if (t.id?.startsWith('m-')) {
+    const k = t.id.slice(2);
+    M[k] = t.type === 'checkbox' ? t.checked : (k === 'fps' ? +t.value : t.value);
+    saveMirror(); if (k === 'audio') render();
+  }
   if (t.id === 'rate') { P.rate = +t.value; video.playbackRate = P.rate; }
   if (t.id?.startsWith('s-')) {
     const k = t.id.slice(2);
