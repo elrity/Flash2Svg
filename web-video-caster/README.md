@@ -1,10 +1,21 @@
 # StreamBeam Caster
 
-A browser-based video casting app modelled on Web Video Caster. It is a single
-self-contained file (`index.html`); open it in a browser or serve the folder
-with any static server (`npx serve web-video-caster`).
+A browser-based video casting app modelled on Web Video Caster, with a Gemini
+"Today" screen for everyday news and weather. The app is one file
+(`index.html`); `server.mjs` runs it in production (see **Run it in
+production** below). It also works from any static host, minus the
+server-side Gemini key and the VLC relay.
 
 ## Features
+
+- **Today (Gemini quick access)**: one-tap tiles for Top news, Weather,
+  Local news, Sports, Markets, Tech, Watch tonight and Commute, plus an
+  "Ask Gemini anything" box. Reach it from the **Ask Gemini** button in the
+  header, the `G` key, or the home-screen shortcuts. Answers use Gemini with
+  Google Search grounding, list their sources, and can be read aloud. They
+  come from the server's key (`GEMINI_API_KEY`) or a key saved in Settings on
+  that device; with neither, each tile copies a ready-made question and opens
+  Gemini. Weather, local news and commute use your city or location.
 
 - **Browser**: open a page or paste a link. The app lists the videos it finds
   (MP4, WebM, HLS `.m3u8`, DASH `.mpd`) with Cast / Queue / Copy link actions.
@@ -65,15 +76,65 @@ HLS playback in non-Safari browsers uses hls.js from jsDelivr.
 1. In VLC: Tools → Preferences → Show settings: **All** → Interface → Main
    interfaces → tick **Web**; under Main interfaces → Lua set a password;
    restart VLC. Or run `vlc --extraintf http --http-password <password>`.
-2. Start the bridge (Node 18+, no dependencies) on the same computer:
-   `VLC_PASSWORD=<password> node web-video-caster/vlc-bridge.mjs`
+2. Start the server (Node 18+, no dependencies) on the same computer:
+   `VLC_PASSWORD=<password> node web-video-caster/server.mjs`
 3. Open `http://localhost:8090`, choose **VLC media player** in the cast list.
 
-To use a phone as the remote, start the bridge with `BIND=0.0.0.0` and open
-`http://<computer-ip>:8090` on the phone. Other options: `PORT`, `VLC_HOST`,
-`VLC_PORT`, `ALLOW_ORIGIN` (to call the bridge from the app hosted elsewhere).
+(`vlc-bridge.mjs` still works; it now starts `server.mjs`.)
 
-The bridge exists because browsers can't send VLC's password and VLC sends no
+To use a phone as the remote, start the server with `BIND=0.0.0.0` and open
+`http://<computer-ip>:8090` on the phone. Other options: `PORT`, `VLC_HOST`,
+`VLC_PORT`, `ALLOW_ORIGIN` (to call the server from the app hosted elsewhere).
+
+The relay exists because browsers can't send VLC's password and VLC sends no
 CORS headers. It only relays the remote-control commands the app uses, only
 lets VLC open network links (never local files), and refuses requests whose
 Host header isn't an IP address or localhost.
+
+## Run it in production
+
+Needs Node 18+ (no packages) or Docker.
+
+```sh
+cd web-video-caster
+GEMINI_API_KEY=<key from aistudio.google.com/apikey> node server.mjs
+# open http://localhost:8090
+```
+
+To use it from your phone and TV on the same Wi-Fi, listen on the network and
+set a password (the browser asks for it once):
+
+```sh
+GEMINI_API_KEY=... BIND=0.0.0.0 APP_PASSWORD=<password> node server.mjs
+# open http://<computer-ip>:8090
+```
+
+Docker:
+
+```sh
+docker build -t streambeam web-video-caster
+docker run -d --restart unless-stopped -p 8090:8090 \
+  -e GEMINI_API_KEY=... -e APP_PASSWORD=... streambeam
+```
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `PORT` / `BIND` | `8090` / `127.0.0.1` | Where the server listens (`0.0.0.0` for other devices) |
+| `APP_PASSWORD` | – | Password prompt for the whole app (recommended whenever `BIND` isn't local) |
+| `GEMINI_API_KEY` | – | Turns on in-app answers for everyone using this server; the key never reaches browsers |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Any Gemini model with Google Search grounding |
+| `GEMINI_LIMIT` | `40` | Questions per address per 10 minutes |
+| `GEMINI_API_BASE` | Google's endpoint | For an API proxy or gateway |
+| `VLC_PASSWORD`, `VLC_HOST`, `VLC_PORT` | relay off | Turns on Cast to VLC |
+| `ALLOW_ORIGIN` | – | Lets the app hosted elsewhere call `/vlc` |
+
+**Install it as an app**: open the server's address in Chrome, Edge or
+Safari and choose *Install* / *Add to Home Screen*. Long-press the icon for
+shortcuts: **Today's news**, **Weather**, **Ask Gemini**, **Mirror screen**.
+The app shell works offline; live answers, casting and video need a network.
+Installing (and screen mirroring) requires `localhost` or HTTPS; to use it
+from other devices, put it behind HTTPS (for example Caddy:
+`caddy reverse-proxy --from streambeam.example.com --to localhost:8090`, or a
+Cloudflare Tunnel).
+
+`/healthz` answers `ok` for uptime checks.
