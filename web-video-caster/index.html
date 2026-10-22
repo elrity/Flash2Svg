@@ -698,7 +698,7 @@ function saveM3u(items, name) {
     a.download = name.replace(/[^\w .-]+/g, '').trim().slice(0, 60) + '.m3u';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    toast('Playlist saved. Open it with VLC.');
+    toast('Open the downloaded .m3u with VLC. No download? Use Copy link.');
   } catch { toast('Saving isn’t allowed here. Copy the link instead.'); }
 }
 let vlcSheetItem = null;
