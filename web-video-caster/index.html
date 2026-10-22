@@ -121,6 +121,7 @@ svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor;
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font: 600 10.5px/1.4 var(--f-mono); letter-spacing: .04em; border: 1px solid var(--line); color: var(--muted); }
 .chip.fmt-MP4 { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
 .chip.fmt-HLS { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.chip.fmt-YOUTUBE { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 .chip.fmt-DASH, .chip.fmt-MKV { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
 .chip.live { color: #fff; background: var(--bad); border-color: var(--bad); }
 .actions { display: flex; gap: 6px; align-items: center; }
@@ -210,6 +211,18 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
 .switch input:checked + i::after { transform: translateX(18px); }
 .switch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* YouTube player: one persistent iframe host laid over the TV screen (moving an iframe reloads it) */
+#ytHost { position: fixed; z-index: 5; left: -9999px; top: 0; width: 320px; height: 180px; visibility: hidden; border-radius: 6px; overflow: hidden; background: #000; }
+#ytHost iframe { width: 100%; height: 100%; border: 0; display: block; }
+.top, .nav { position: relative; z-index: 6; }
+.yt-tv { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.yt-tv h2 { margin: 0; font: 700 15px/1.3 var(--f-body); }
+.yt-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.yt-opts > div { padding: 12px 14px; border-radius: 8px; background: var(--panel-2); display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--muted); min-width: 0; }
+.yt-opts b { color: var(--fg); font-size: 14px; }
+.yt-opts .btn { align-self: flex-start; }
+a.btn { text-decoration: none; }
+
 /* Mirror */
 .mirror { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
 .screen video.mv { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -234,7 +247,7 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
 kbd { font: 600 11.5px/1 var(--f-mono); padding: 2px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--panel-2); color: var(--fg); }
 
 /* Mini remote */
-.mini { grid-area: mini; display: flex; align-items: center; gap: 14px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-top: 1px solid var(--line); background: var(--panel); position: relative; }
+.mini { grid-area: mini; z-index: 6; display: flex; align-items: center; gap: 14px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-top: 1px solid var(--line); background: var(--panel); position: relative; }
 .mini .bar { position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: var(--line); }
 .mini .bar i { display: block; height: 100%; width: 0; background: var(--accent); }
 .mini .thumb { width: 64px; cursor: pointer; }
@@ -376,7 +389,26 @@ const fmt = s => {
 const hue = str => { let h = 0; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 360; };
 const poster = title => { const h = hue(title); return `background: linear-gradient(135deg, hsl(${h} 62% 38%), hsl(${(h + 48) % 360} 70% 22%) 60%, hsl(${(h + 96) % 360} 55% 14%));`; };
 const initials = t => String(t).replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '▶';
+/* YouTube links: watch, youtu.be, shorts, live, embed, playlists, music and mobile hosts */
+const ytTime = t => { if (!t) return 0; if (/^\d+$/.test(t)) return +t; const m = String(t).match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/); return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0; };
+function ytParse(u) {
+  let x; try { x = new URL(u); } catch { return null; }
+  const h = x.hostname.replace(/^(www|m|music)\./, '');
+  let id = null;
+  if (h === 'youtu.be') id = x.pathname.slice(1).split('/')[0];
+  else if (h === 'youtube.com' || h === 'youtube-nocookie.com') {
+    id = x.searchParams.get('v');
+    const m = x.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/); if (m) id = m[1];
+  } else return null;
+  if (id && !/^[\w-]{11}$/.test(id)) id = null;
+  const list = x.searchParams.get('list');
+  if (!id && !list) return null;
+  return { id, list, start: ytTime(x.searchParams.get('t') || x.searchParams.get('start')) };
+}
+const ytUrl = y => y.id ? `https://www.youtube.com/watch?v=${y.id}${y.list ? '&list=' + y.list : ''}` : `https://www.youtube.com/playlist?list=${y.list}`;
+const ytItem = (url, title) => { const y = ytParse(url); return { id: uid(), title: title || (y.id ? 'YouTube video' : 'YouTube playlist'), url: ytUrl(y), start: y.start, res: y.id ? 'Auto quality' : 'Playlist', size: '—', duration: 0, source: 'YouTube' }; };
 const fmtOf = url => {
+  if (ytParse(url)) return 'YOUTUBE';
   const u = String(url).toLowerCase().split('?')[0];
   if (u.startsWith('blob:')) return 'FILE';
   if (u.endsWith('.m3u8')) return 'HLS';
@@ -408,6 +440,12 @@ const SITES = [
       { title: 'Bip-Bop 16×9', url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8', duration: 1800, res: 'Auto · 4 levels', size: 'Adaptive' },
       { title: 'Envivio DASH sample', url: 'https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd', duration: 193, res: 'Auto', size: 'Adaptive' }
     ] },
+  { id: 'youtube', name: 'YouTube', url: 'https://www.youtube.com/@BlenderOfficial', blurb: 'Paste any YouTube link: videos, Shorts, live streams or playlists.',
+    media: [
+      ytItem('https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'Big Buck Bunny 60fps 4K'),
+      ytItem('https://www.youtube.com/watch?v=eRsGyueVLvQ', 'Sintel'),
+      ytItem('https://www.youtube.com/watch?v=R6MlUcmOul8', 'Tears of Steel')
+    ].map((m, i) => ({ ...m, res: '4K · Auto quality', duration: [635, 888, 734][i] })) },
   { id: 'shorts', name: 'Short clips', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/', blurb: 'Quick 15-second clips for testing a TV.',
     media: [
       { title: 'For Bigger Blazes', url: G + 'ForBiggerBlazes.mp4', duration: 15, res: '720p', size: '2.4 MB' },
@@ -468,12 +506,89 @@ const save = () => { ['queue', 'history', 'bookmarks', 'settings', 'device', 'm3
 /* ---------- Playback engine ---------- */
 const video = $('#video');
 let hls = null;
-const P = { item: null, playing: false, pos: 0, dur: 0, live: false, vol: .8, muted: false, rate: 1, real: false, subs: null, subName: '' };
+const P = { item: null, playing: false, pos: 0, dur: 0, live: false, vol: .8, muted: false, rate: 1, real: false, subs: null, subName: '', yt: null, ytState: '' };
+
+/* YouTube runs in the official IFrame Player, driven by the same remote controls */
+const ytHost = document.createElement('div'); ytHost.id = 'ytHost'; ytHost.innerHTML = '<div id="ytInner"></div>';
+const Y = { api: null, player: null, ready: false, key: '' };
+const ytOn = () => P.yt && Y.ready && Y.key === P.item?.url;
+function ytApi() {
+  if (Y.api) return Y.api;
+  Y.api = new Promise((res, rej) => {
+    if (window.YT && YT.Player) return res();
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { prev && prev(); res(); };
+    const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => rej(new Error('blocked'));
+    document.head.appendChild(sc);
+    setTimeout(() => rej(new Error('timeout')), 9000);
+  }).catch(e => { Y.api = null; throw e; });
+  return Y.api;
+}
+async function ytLoad(item, startAt) {
+  const y = ytParse(item.url);
+  P.ytState = 'loading'; Y.ready = false;
+  try { await ytApi(); } catch { if (P.item === item) { P.ytState = 'blocked'; render(); } return; }
+  if (P.item !== item) return;
+  const start = Math.floor(startAt || item.start || 0);
+  const vars = { playsinline: 1, rel: 0, controls: 0, disablekb: 1, iv_load_policy: 3, start, autoplay: P.playing ? 1 : 0 };
+  if (location.protocol.startsWith('http')) vars.origin = location.origin;
+  if (!Y.player) {
+    document.body.appendChild(ytHost);
+    if (!y.id) Object.assign(vars, { listType: 'playlist', list: y.list });
+    Y.player = new YT.Player('ytInner', { width: '100%', height: '100%', videoId: y.id || undefined, playerVars: vars,
+      events: {
+        onReady: () => { Y.ready = true; Y.key = P.item?.url; ytSync(); if (y.id && y.list) Y.player.cuePlaylist?.({ list: y.list }); },
+        onStateChange: ytState,
+        onError: e => { P.ytState = { 2: 'badid', 5: 'html5', 100: 'missing', 101: 'noembed', 150: 'noembed', 153: 'config' }[e.data] || 'error'; P.playing = false; render(); }
+      } });
+  } else {
+    Y.key = item.url; Y.ready = true;
+    if (y.id) (P.playing ? Y.player.loadVideoById : Y.player.cueVideoById).call(Y.player, { videoId: y.id, startSeconds: start });
+    else (P.playing ? Y.player.loadPlaylist : Y.player.cuePlaylist).call(Y.player, { list: y.list, listType: 'playlist', startSeconds: start });
+    ytSync();
+  }
+}
+function ytSync() {
+  if (!ytOn()) return;
+  const pl = Y.player;
+  pl.setVolume(Math.round(P.vol * 100)); P.muted ? pl.mute() : pl.unMute(); pl.setPlaybackRate(P.rate);
+  P.ytState = 'ok'; render();
+}
+function ytState(e) {
+  if (!P.yt) return;
+  const pl = Y.player;
+  if (e.data === YT.PlayerState.PLAYING) {
+    P.playing = true; P.ytState = 'ok';
+    const d = pl.getDuration(); P.live = !!pl.getVideoData?.().isLive || !d; if (d) P.dur = d;
+    const t = pl.getVideoData?.().title; if (t && P.item && /^YouTube (video|playlist)$/.test(P.item.title)) { P.item.title = t; render(); }
+  } else if (e.data === YT.PlayerState.PAUSED) P.playing = false;
+  else if (e.data === YT.PlayerState.ENDED) { onEnded(); return; }
+  tick(true);
+}
+function placeYT() {
+  const sc = $('#screen');
+  const show = P.yt && Y.player && sc && S.view === 'player' && P.ytState === 'ok';
+  if (!show) { ytHost.style.visibility = 'hidden'; ytHost.style.left = '-9999px'; return; }
+  const r = sc.getBoundingClientRect();
+  Object.assign(ytHost.style, { visibility: 'visible', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+}
+addEventListener('resize', placeYT);
+async function ytTitle(item) {
+  try {
+    const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(item.url));
+    const j = await r.json();
+    if (j.title) { item.title = j.title; item.channel = j.author_name; render(); }
+  } catch {}
+}
 
 function load(item, startAt = 0) {
   P.item = item; P.pos = startAt; P.dur = item.duration || 0; P.live = !!item.live; P.real = false; P.subs = null; P.subName = '';
   if (hls) { hls.destroy(); hls = null; }
   video.removeAttribute('src'); video.load();
+  P.yt = ytParse(item.url); P.ytState = '';
+  if (Y.player && Y.ready) { try { Y.player.stopVideo(); } catch {} }
+  Y.key = '';
+  if (P.yt) { if (!P.pos && item.start) P.pos = item.start; return; }
   const f = fmtOf(item.url);
   try {
     if (f === 'HLS' && !video.canPlayType('application/vnd.apple.mpegurl') && window.Hls && Hls.isSupported()) {
@@ -501,10 +616,11 @@ function playItem(item, opts = {}) {
   load(it, opts.from ?? (resume > 5 && resume < (it.duration || Infinity) - 10 ? resume : 0));
   P.playing = true;
   if (P.real) video.play().catch(() => {});
+  if (P.yt) ytLoad(it, P.pos);
   logHistory();
   if (!S.device) { openDevices(); toast('Choose a screen to cast to'); }
   else toast(`Casting “${it.title}” to ${devName()}`);
-  if (S.device === 'remote') promptRemote();
+  if (S.device === 'remote' && !P.yt) promptRemote();
   S.view = 'player';
   render();
 }
@@ -512,12 +628,14 @@ function toggle() {
   if (!P.item) return;
   P.playing = !P.playing;
   if (P.real) P.playing ? video.play().catch(() => {}) : video.pause();
+  if (ytOn()) P.playing ? Y.player.playVideo() : Y.player.pauseVideo();
   tick(true);
 }
 function seek(t) {
   if (!P.item || P.live) return;
   P.pos = Math.max(0, Math.min(P.dur || 0, t));
   if (P.real) video.currentTime = P.pos;
+  if (ytOn()) Y.player.seekTo(P.pos, true);
   tick(true);
 }
 function stop() {
@@ -525,6 +643,8 @@ function stop() {
   P.item = null; P.playing = false; P.pos = 0;
   if (hls) { hls.destroy(); hls = null; }
   video.pause(); video.removeAttribute('src'); video.load();
+  if (Y.player && Y.ready) { try { Y.player.stopVideo(); } catch {} }
+  P.yt = null; Y.key = '';
   render();
 }
 function next() {
@@ -546,6 +666,8 @@ let lastHist = 0;
 setInterval(() => {
   if (!P.item || !P.playing) return;
   if (P.real) { P.pos = video.currentTime; }
+  else if (ytOn()) { P.pos = Y.player.getCurrentTime() || 0; const d = Y.player.getDuration(); if (d && !P.live) P.dur = d; }
+  else if (P.yt && P.ytState !== 'blocked') { /* waiting on YouTube */ }
   else {
     P.pos += .25 * P.rate;
     if (!P.live && P.dur && P.pos >= P.dur) { P.pos = P.dur; onEnded(); return; }
@@ -663,7 +785,15 @@ async function browse(raw) {
   if (!/^[a-z]+:/i.test(url)) url = (/\s/.test(url) || !/\./.test(url)) ? 'https://duckduckgo.com/?q=' + encodeURIComponent(url) : 'https://' + url;
   S.url = url; S.notice = null;
   const site = SITES.find(s => s.url === url);
-  if (site) { S.detected = site.media.map(m => ({ ...m, id: uid(), source: site.name })); S.notice = { ok: true, text: `Found ${site.media.length} videos on this page.` }; return render(); }
+  if (site) { S.detected = site.media.map(m => ({ ...m, id: uid(), source: site.name })); S.notice = { ok: true, text: site.id === 'youtube' ? 'Paste a YouTube link above, or cast one of these.' : `Found ${site.media.length} videos on this page.` }; return render(); }
+  if (ytParse(url)) {
+    const it = ytItem(url); S.detected = [it];
+    S.notice = { ok: true, text: ytParse(url).id ? 'YouTube video. Ready to cast.' : 'YouTube playlist. Ready to cast.' };
+    render(); ytTitle(it); return;
+  }
+  if (/(^|\.)(youtube\.com|youtu\.be)$/i.test(new URL(url).hostname)) {
+    S.detected = []; S.notice = { text: 'Open a video on YouTube, tap Share → Copy link, and paste the link here.', link: url }; return render();
+  }
   if (fmtOf(url) !== 'MP4' || /\.(mp4|m4v)(\?|$)/i.test(url)) {
     if (/\.(mp4|m4v|webm|mov|mkv|m3u8|mpd|mp3|m4a)(\?|$)/i.test(url)) {
       const name = decodeURIComponent(url.split('?')[0].split('/').pop()).replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
@@ -682,8 +812,10 @@ async function browse(raw) {
       const v = el.getAttribute('src') || el.getAttribute('href');
       if (el.tagName !== 'A' || /\.(mp4|m4v|webm|mov|mkv|m3u8|mpd)(\?|$)/i.test(v)) { try { found.set(new URL(v, url).href, el.closest('video')?.getAttribute('title') || ''); } catch {} }
     });
+    (html.match(/(?:youtube(?:-nocookie)?\.com\/(?:embed\/|watch\?v=|shorts\/)|youtu\.be\/)[\w-]{11}/g) || []).forEach(m => { const it = ytItem('https://' + m.replace(/^/, m.startsWith('youtu.be') ? '' : 'www.')); if (!found.has(it.url)) found.set(it.url, ''); });
     (html.match(MEDIA_RE) || []).forEach(m => { try { const h = new URL(m.startsWith('//') ? 'https:' + m : m).href; if (!found.has(h)) found.set(h, ''); } catch {} });
-    S.detected = [...found].map(([u, t]) => ({ id: uid(), url: u, title: t || decodeURIComponent(u.split('?')[0].split('/').pop()), res: '—', size: '—', duration: 0, source: new URL(url).hostname }));
+    S.detected = [...found].map(([u, t]) => ytParse(u) ? ytItem(u, t) : ({ id: uid(), url: u, title: t || decodeURIComponent(u.split('?')[0].split('/').pop()), res: '—', size: '—', duration: 0, source: new URL(url).hostname }));
+    S.detected.filter(m => ytParse(m.url)).forEach(ytTitle);
     S.notice = S.detected.length ? { ok: true, text: `Found ${S.detected.length} video${S.detected.length > 1 ? 's' : ''} on this page.` } : { text: 'No videos found on this page. Start the video on the site first, or paste its direct link (.mp4, .m3u8, .mpd).' };
   } catch {
     S.detected = [];
@@ -701,6 +833,7 @@ function parseM3U(text) {
       const attr = k => (l.match(new RegExp(k + '="([^"]*)"')) || [])[1] || '';
       cur = { title: l.slice(l.lastIndexOf(',') + 1).trim() || 'Channel', group: attr('group-title') || 'Other', logo: attr('tvg-logo') };
     } else if (!l.startsWith('#')) {
+      if (ytParse(l)) l = ytUrl(ytParse(l));
       out.push({ id: uid(), ...(cur || { title: l.split('/').pop(), group: 'Other' }), url: l, live: fmtOf(l) === 'HLS' || fmtOf(l) === 'DASH', res: 'Live', size: '—', duration: 0 });
       cur = null;
     }
@@ -710,10 +843,13 @@ function parseM3U(text) {
 
 /* ---------- Rendering ---------- */
 const main = $('#main');
+main.addEventListener('scroll', () => placeYT(), { passive: true });
 function devName() { return DEVICES.find(d => d.id === S.device)?.name || 'this device'; }
 function thumb(m, w) {
+  const y = ytParse(m.url);
+  const img = y && y.id ? `background-image: url(https://i.ytimg.com/vi/${y.id}/mqdefault.jpg), ${poster(m.title).slice(12, -1)}; background-size: cover; background-position: center;` : poster(m.title);
   const d = m.live ? '<span class="dur">LIVE</span>' : m.duration ? `<span class="dur">${fmt(m.duration)}</span>` : '';
-  return `<div class="thumb" style="${poster(m.title)}${w ? 'width:' + w : ''}">${esc(initials(m.title))}${d}</div>`;
+  return `<div class="thumb" style="${img}${w ? 'width:' + w : ''}">${y && y.id ? '' : esc(initials(m.title))}${d}</div>`;
 }
 function mediaRow(m, actions, extra = '') {
   const f = fmtOf(m.url);
@@ -758,6 +894,7 @@ const views = {
     return `<div class="view-head"><div class="grow"><div class="eyebrow">${dev ? 'Casting to ' + esc(dev.name) : 'Not connected'}</div><h1>Remote</h1></div>
       <button class="btn" data-act="devices">${icon('cast')}${dev ? 'Change screen' : 'Connect'}</button></div>
     ${M.stream ? `<div class="notice bad" style="margin:0">Your screen is being mirrored. Playing a video stops the mirror. <button class="btn ghost sm" data-act="openMirror">Go to mirroring</button></div>` : ''}
+    ${P.yt ? ytNotice() : ''}
     <div class="np">
       <div class="tv"><div class="screen ${it ? '' : 'idle'}" id="screen"></div>
         <div class="tv-foot"><span>${dev ? icon(dev.icon) + ' ' + esc(dev.kind) : 'No screen connected'}</span><span class="mono" id="srcState"></span></div></div>
@@ -785,7 +922,8 @@ const views = {
         </div>
         ${S.queue.length ? `<div class="meta" style="border-top:1px solid var(--line);padding-top:12px"><div class="eyebrow">Up next</div><div class="t" style="margin-top:6px">${esc(S.queue[0].title)}</div><div class="s">${S.queue.length} in queue · Autoplay ${S.settings.autoplay ? 'on' : 'off'}</div></div>` : ''}
       </div>
-    </div>`;
+    </div>
+    ${P.yt ? ytPanel() : ''}`;
   },
 
   mirror() {
@@ -896,6 +1034,36 @@ const views = {
   }
 };
 
+function ytLink() {
+  const y = P.yt; if (!y) return '';
+  return y.id ? `https://www.youtube.com/watch?v=${y.id}${y.list ? '&list=' + y.list : ''}${P.pos > 5 ? '&t=' + Math.floor(P.pos) + 's' : ''}` : ytUrl(y);
+}
+function ytNotice() {
+  const msg = {
+    loading: ['', 'Loading the YouTube player…'],
+    blocked: ['bad', 'YouTube can’t load inside this page (it blocks the YouTube player). Open the app directly in a browser, or use one of the options below to watch on a real TV.'],
+    noembed: ['bad', 'The owner of this video doesn’t allow it to play outside YouTube. Use one of the options below instead.'],
+    missing: ['bad', 'This video is private, removed or unavailable in your country.'],
+    badid: ['bad', 'This YouTube link isn’t valid. Copy it again from YouTube with Share → Copy link.'],
+    config: ['bad', 'YouTube refused the player here. Serve the app from a web address (for example run npx serve) instead of opening the file directly.'],
+    html5: ['bad', 'YouTube couldn’t play this video in the browser.'],
+    error: ['bad', 'YouTube couldn’t play this video.']
+  }[P.ytState];
+  const file = location.protocol === 'file:' && P.ytState !== 'ok';
+  return msg ? `<div class="notice ${msg[0]}" style="margin:0">${msg[1]}${file && P.ytState !== 'config' ? ' YouTube also needs the app served from a web address, not opened as a file.' : ''}</div>` : '';
+}
+function ytPanel() {
+  const real = DEVICES.find(d => d.id === S.device)?.real || !S.settings.demo;
+  return `<section class="panel yt-tv"><h2>${icon('tv')} Put this YouTube video on a real TV${real ? '' : '<span class="muted" style="font-weight:500"> · the demo TV above is a preview</span>'}</h2>
+    <div class="yt-opts">
+      <div><b>Cast from the YouTube app</b>Opens the video at ${fmt(P.pos)}. On a phone it opens the YouTube app: tap the Cast button and pick your TV.
+        <span class="actions"><a class="btn primary sm" href="${esc(ytLink())}" target="_blank" rel="noopener">Open in YouTube ↗</a><button class="icon-btn" data-act="ytCopy" title="Copy link" aria-label="Copy YouTube link">${icon('copy')}</button></span></div>
+      <div><b>Link with TV code</b>On the TV’s YouTube app: Settings → Link with TV code. Then in YouTube on your phone: Settings → Watch on TV → Enter TV code.</div>
+      <div><b>Mirror this tab</b>Sends this tab, sound included, to any TV your browser can cast to.
+        <button class="btn sm" data-act="ytMirror">${icon('mirror')}Set up mirroring</button></div>
+    </div></section>`;
+}
+
 function renderScreen() {
   const el = $('#screen'); if (!el) return;
   const it = P.item;
@@ -909,8 +1077,9 @@ function renderScreen() {
     <div class="cue" id="cue" hidden></div><div class="pause-ind" id="pauseInd" ${P.playing ? 'hidden' : ''}><span>${icon('pause')}</span></div>`;
   video.hidden = !P.real;
   el.insertBefore(video, el.querySelector('.osd'));
-  $('#srcState').textContent = P.real ? 'Streaming' : 'Receiver preview';
+  $('#srcState').textContent = P.real ? 'Streaming' : P.yt ? (P.ytState === 'ok' ? 'YouTube player' : 'Receiver preview') : 'Receiver preview';
   tick(true);
+  placeYT();
 }
 
 function renderMirrorScreen() {
@@ -977,6 +1146,7 @@ function render() {
   main.innerHTML = `<div class="view">${views[S.view]()}</div>`;
   if (S.view === 'player') renderScreen();
   if (S.view === 'mirror') renderMirrorScreen();
+  placeYT();
   renderMini();
 }
 
@@ -1060,7 +1230,9 @@ document.addEventListener('click', async e => {
     case 'fwd': seek(P.pos + S.settings.skip); break;
     case 'stop': stop(); toast('Stopped casting'); break;
     case 'next': next(); break;
-    case 'mute': P.muted = !P.muted; video.muted = P.muted; render(); break;
+    case 'mute': P.muted = !P.muted; video.muted = P.muted; if (ytOn()) P.muted ? Y.player.mute() : Y.player.unMute(); render(); break;
+    case 'ytMirror': S.view = 'mirror'; M.surface = 'browser'; saveMirror(); render(); break;
+    case 'ytCopy': try { await navigator.clipboard.writeText(ytLink()); toast('YouTube link copied'); } catch { toast('Copy blocked. Use Open in YouTube instead.'); } break;
     case 'subs': if (P.subName) { P.subs = null; P.subName = ''; render(); } else $('#subFile').click(); break;
     case 'devices': openDevices(); break;
     case 'openPlayer': S.view = 'player'; render(); break;
@@ -1086,7 +1258,7 @@ document.addEventListener('submit', e => {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'seek') { t.style.setProperty('--p', (t.value / t.max * 100) + '%'); $('#tPos').textContent = fmt(+t.value); }
-  if (t.id === 'vol') { P.vol = t.value / 100; P.muted = P.vol === 0; video.volume = P.vol; video.muted = P.muted; t.style.setProperty('--p', t.value + '%'); $('#volTxt').textContent = t.value; }
+  if (t.id === 'vol') { P.vol = t.value / 100; P.muted = P.vol === 0; video.volume = P.vol; video.muted = P.muted; if (ytOn()) { Y.player.setVolume(+t.value); P.muted ? Y.player.mute() : Y.player.unMute(); } t.style.setProperty('--p', t.value + '%'); $('#volTxt').textContent = t.value; }
   if (t.id === 'chSearch') { S.chSearch = t.value; const pos = t.selectionStart; render(); const n = $('#chSearch'); n.focus(); n.setSelectionRange(pos, pos); }
 });
 document.addEventListener('change', async e => {
@@ -1097,7 +1269,7 @@ document.addEventListener('change', async e => {
     M[k] = t.type === 'checkbox' ? t.checked : (k === 'fps' ? +t.value : t.value);
     saveMirror(); if (k === 'audio') render();
   }
-  if (t.id === 'rate') { P.rate = +t.value; video.playbackRate = P.rate; }
+  if (t.id === 'rate') { P.rate = +t.value; video.playbackRate = P.rate; if (ytOn()) Y.player.setPlaybackRate(P.rate); }
   if (t.id?.startsWith('s-')) {
     const k = t.id.slice(2);
     S.settings[k] = t.type === 'checkbox' ? t.checked : (k === 'skip' ? +t.value : t.value);

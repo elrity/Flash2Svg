@@ -16,6 +16,16 @@ with any static server (`npx serve web-video-caster`).
   which does real Chromecast / AirPlay casting in supporting browsers. The
   Chromecast, Roku, Fire TV, DLNA and AirPlay entries are **demo receivers**
   (simulated) and can be hidden in Settings.
+- **YouTube**: paste any YouTube link (watch, youtu.be, Shorts, live,
+  embed, playlists, mobile and music hosts; `t=` start times are kept) or
+  scan a page with embedded YouTube videos. Videos play in the official
+  YouTube IFrame Player, which the remote drives (play/pause, seek, skip,
+  volume, mute, speed, queue/autoplay, resume from history). YouTube does not
+  let other apps pull its video files for casting, so the Remote also offers
+  three ways onto a real TV: Open in YouTube (the app's own Cast button),
+  Link with TV code, and mirroring the tab. Videos whose owners turned off
+  embedding show a clear message. The YouTube player needs the app served
+  over http(s), e.g. `npx serve web-video-caster`, not opened as a file.
 - **Screen mirroring**: share the entire screen, a window or a browser tab
   (`getDisplayMedia`) at 720p/1080p/1440p and 15/30/60 fps, with optional
   sound, live stats and a Stop control in the bottom bar. A web page can't
