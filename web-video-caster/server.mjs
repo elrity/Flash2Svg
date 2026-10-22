@@ -11,7 +11,9 @@
 //      GEMINI_API_KEY, GEMINI_MODEL (gemini-2.5-flash), GEMINI_API_BASE (Google's endpoint; for a proxy/gateway), GEMINI_LIMIT (requests per 10 min per address, 40),
 //      VLC_PASSWORD (turns the VLC relay on), VLC_HOST (127.0.0.1), VLC_PORT (8080),
 //      ALLOW_ORIGIN (another origin allowed to call /vlc, e.g. where you host index.html),
-//      TRUST_PROXY (set behind a hosting proxy such as Render, so limits use the visitor's address).
+//      TRUST_PROXY (set behind a hosting proxy such as Render, so limits use the visitor's address),
+//      ANDROID_CERT_SHA256 (the Android app's signing fingerprint(s), comma-separated) and ANDROID_PACKAGE
+//      (app.streambeam.caster): serves /.well-known/assetlinks.json so the APK opens without a browser bar.
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
@@ -32,6 +34,8 @@ const VLC_ON = 'VLC_PASSWORD' in env;
 const VLC_AUTH = 'Basic ' + Buffer.from(':' + (env.VLC_PASSWORD || '')).toString('base64');
 const ALLOW_ORIGIN = env.ALLOW_ORIGIN || '';
 const TRUST_PROXY = /^(1|true|yes)$/i.test(env.TRUST_PROXY || '');
+const ANDROID_CERTS = (env.ANDROID_CERT_SHA256 || '').split(',').map(s => s.trim().toUpperCase()).filter(s => /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(s));
+const ASSET_LINKS = ANDROID_CERTS.length ? JSON.stringify([{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: env.ANDROID_PACKAGE || 'app.streambeam.caster', sha256_cert_fingerprints: ANDROID_CERTS } }]) : '';
 
 const FILES = {
   '/': ['index.html', 'text/html; charset=utf-8', 'no-cache'],
@@ -132,7 +136,7 @@ http.createServer(async (req, res) => {
   const origin = req.headers.origin;
   if (origin && ALLOW_ORIGIN && origin === ALLOW_ORIGIN) res.setHeader('Access-Control-Allow-Origin', origin);
   // The manifest, icons and health check stay public (install prompt, container health checks).
-  const open = url.pathname === '/manifest.webmanifest' || url.pathname === '/healthz' || url.pathname.startsWith('/icons/');
+  const open = url.pathname === '/manifest.webmanifest' || url.pathname === '/healthz' || url.pathname === '/.well-known/assetlinks.json' || url.pathname.startsWith('/icons/');
   if (!open && !authorized(req)) {
     res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="StreamBeam", charset="UTF-8"', 'Content-Type': 'text/plain' });
     return res.end('Enter the StreamBeam password.');
@@ -148,6 +152,7 @@ http.createServer(async (req, res) => {
       return res.end(req.method === 'HEAD' ? undefined : data);
     }
     if (url.pathname === '/healthz') return send(res, 200, 'ok', 'text/plain');
+    if (url.pathname === '/.well-known/assetlinks.json' && ASSET_LINKS) return send(res, 200, ASSET_LINKS);
     send(res, 404, 'Not found', 'text/plain');
   } catch (e) {
     console.error(e);

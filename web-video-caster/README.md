@@ -150,6 +150,7 @@ docker run -d --restart unless-stopped -p 8090:8090 \
 | `VLC_PASSWORD`, `VLC_HOST`, `VLC_PORT` | relay off | Turns on Cast to VLC |
 | `ALLOW_ORIGIN` | – | Lets the app hosted elsewhere call `/vlc` |
 | `TRUST_PROXY` | off | Behind a hosting proxy (Render, Fly, Nginx): limit Gemini per visitor, not per proxy |
+| `ANDROID_CERT_SHA256`, `ANDROID_PACKAGE` | – | Publishes `/.well-known/assetlinks.json` for the Android app (see `android/README.md`) |
 
 **Install it as an app**: open the server's address in Chrome, Edge or
 Safari and choose *Install* / *Add to Home Screen*. Long-press the icon for
@@ -161,3 +162,6 @@ from other devices, put it behind HTTPS (for example Caddy:
 Cloudflare Tunnel).
 
 `/healthz` answers `ok` for uptime checks.
+
+**Android app (APK)**: `android/` wraps the hosted app as an installable
+APK, built by GitHub Actions. See `android/README.md`.
