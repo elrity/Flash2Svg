@@ -223,6 +223,17 @@ details.import .body { padding: 0 16px 16px; display: flex; flex-direction: colu
 .yt-opts .btn { align-self: flex-start; }
 a.btn { text-decoration: none; }
 
+/* VLC */
+.chip.vlc { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.vlc-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 13.5px; }
+.vlc-steps b { color: var(--fg); font-weight: 600; }
+.vlc-steps code, .sheet code { font: 12px/1.5 var(--f-mono); padding: 1px 5px; border-radius: 4px; background: var(--panel-2); color: var(--fg); overflow-wrap: anywhere; }
+.bridge { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.bridge input { flex: 1; min-width: 200px; height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font: 13px var(--f-mono); }
+.sheet .opt { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+.sheet .opt b { color: var(--fg); font-size: 14.5px; }
+.sheet .opt .actions { flex-wrap: wrap; }
+
 /* Mirror */
 .mirror { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
 .screen video.mv { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -336,6 +347,7 @@ kbd { font: 600 11.5px/1 var(--f-mono); padding: 2px 5px; border: 1px solid var(
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
     <symbol id="i-mirror" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4M9 10.5l3-3 3 3M12 7.5v6"/></symbol>
+    <symbol id="i-vlc" viewBox="0 0 24 24"><path d="M10.2 3h3.6l5.2 15H5z"/><path d="M8 11.5h8M6.8 15h10.4"/><path d="M3 21h18"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.8-4M4 4v4h4M4 13a8 8 0 0 0 14.8 4M20 20v-4h-4"/></symbol>
   </defs>
 </svg>
@@ -416,6 +428,10 @@ const fmtOf = url => {
   if (u.endsWith('.webm')) return 'WEBM';
   if (u.endsWith('.mkv')) return 'MKV';
   if (u.endsWith('.mov')) return 'MOV';
+  if (u.endsWith('.avi')) return 'AVI';
+  if (u.endsWith('.flv')) return 'FLV';
+  if (u.endsWith('.wmv')) return 'WMV';
+  if (u.endsWith('.ts')) return 'TS';
   if (/\.(mp3|m4a|aac|ogg|flac|wav)$/.test(u)) return 'AUDIO';
   return 'MP4';
 };
@@ -426,6 +442,8 @@ const store = {
 
 /* ---------- Sample content (public test media) ---------- */
 const G = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/';
+/* Formats browsers can't decode on their own; VLC plays them */
+const NEEDS_VLC = ['MKV', 'AVI', 'FLV', 'WMV', 'TS', 'DASH'];
 const SITES = [
   { id: 'blender', name: 'Blender Open Movies', url: 'https://studio.blender.org/films/', blurb: 'Four open movies, MP4 up to 1080p.',
     media: [
@@ -438,7 +456,8 @@ const SITES = [
     media: [
       { title: 'Bunny (HLS ladder)', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', duration: 596, res: 'Auto · 5 levels', size: 'Adaptive' },
       { title: 'Bip-Bop 16×9', url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8', duration: 1800, res: 'Auto · 4 levels', size: 'Adaptive' },
-      { title: 'Envivio DASH sample', url: 'https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd', duration: 193, res: 'Auto', size: 'Adaptive' }
+      { title: 'Envivio DASH sample', url: 'https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd', duration: 193, res: 'Auto', size: 'Adaptive' },
+      { title: 'Jellyfish 4K HEVC (MKV)', url: 'https://repo.jellyfin.org/archive/jellyfish/media/jellyfish-10-mbps-hd-hevc.mkv', duration: 30, res: '1080p HEVC', size: '38 MB' }
     ] },
   { id: 'youtube', name: 'YouTube', url: 'https://www.youtube.com/@BlenderOfficial', blurb: 'Paste any YouTube link: videos, Shorts, live streams or playlists.',
     media: [
@@ -472,6 +491,7 @@ https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd`;
 
 const DEVICES = [
   { id: 'remote', name: 'Nearby screen', kind: 'Browser Remote Playback', icon: 'chrome', real: true },
+  { id: 'vlc', name: 'VLC media player', kind: 'VLC on a computer · via StreamBeam bridge', icon: 'vlc', real: true },
   { id: 'cc-living', name: 'Living Room TV', kind: 'Chromecast · 192.168.1.24', icon: 'cast' },
   { id: 'roku', name: 'Bedroom Roku', kind: 'Roku Ultra · 192.168.1.31', icon: 'roku' },
   { id: 'fire', name: 'Office Fire TV', kind: 'Fire TV Stick 4K · 192.168.1.40', icon: 'fire' },
@@ -492,7 +512,7 @@ const S = {
   m3u: store.get('m3u', SAMPLE_M3U),
   group: 'All', chSearch: '',
   local: [],
-  settings: Object.assign({ autoplay: true, skip: 10, subSize: 'Medium', resume: true, demo: true, quality: 'Auto' }, store.get('settings', {})),
+  settings: Object.assign({ autoplay: true, skip: 10, subSize: 'Medium', resume: true, demo: true, quality: 'Auto', vlcFallback: true, vlcBridge: '' }, store.get('settings', {})),
   scanning: false
 };
 if (!S.queue) S.queue = [SITES[0].media[1], SITES[1].media[0]].map(m => ({ ...m, id: uid() }));
@@ -585,7 +605,9 @@ function load(item, startAt = 0) {
   P.item = item; P.pos = startAt; P.dur = item.duration || 0; P.live = !!item.live; P.real = false; P.subs = null; P.subName = '';
   if (hls) { hls.destroy(); hls = null; }
   video.removeAttribute('src'); video.load();
-  P.yt = ytParse(item.url); P.ytState = '';
+  P.yt = ytParse(item.url); P.ytState = ''; P.vidErr = false;
+  P.ext = S.device === 'vlc' && canVlc(item.url) ? 'vlc' : '';
+  if (P.ext) { P.yt = null; if (Y.player && Y.ready) { try { Y.player.stopVideo(); } catch {} } Y.key = ''; if (!P.pos && item.start) P.pos = item.start; return; }
   if (Y.player && Y.ready) { try { Y.player.stopVideo(); } catch {} }
   Y.key = '';
   if (P.yt) { if (!P.pos && item.start) P.pos = item.start; return; }
@@ -606,7 +628,96 @@ video.addEventListener('loadedmetadata', () => {
   if (P.playing) video.play().catch(() => {});
   renderScreen();
 });
-video.addEventListener('error', () => { P.real = false; renderScreen(); });
+video.addEventListener('error', () => { P.real = false; if (P.item && video.getAttribute('src')) P.vidErr = true; if (S.view === 'player') render(); else renderScreen(); });
+
+/* ---------- VLC ----------
+   VLC acts as a receiver through its web interface (Lua HTTP). Browsers can't send VLC's password,
+   so vlc-bridge.mjs serves this app and relays /vlc/status to VLC's /requests/status.json. */
+const V = { ok: false, err: '', version: '', state: '', busy: false };
+const vlcBase = () => (S.settings.vlcBridge || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:8090')).replace(/\/+$/, '');
+const vlcOn = () => P.ext === 'vlc';
+const canVlc = url => !String(url).startsWith('blob:');
+async function vlc(command, params = {}) {
+  const q = new URLSearchParams(command ? { command, ...params } : params);
+  const r = await fetch(vlcBase() + '/vlc/status?' + q, { cache: 'no-store' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(r.status === 401 ? 'VLC rejected the password. Check VLC_PASSWORD matches the password set in VLC.' : (j.error || 'The bridge answered ' + r.status + '.'));
+  return j;
+}
+async function vlcConnect(quiet) {
+  V.busy = true; if (!quiet) render();
+  try {
+    const j = await vlc('');
+    V.ok = true; V.err = ''; V.version = j.version || ''; if (!quiet) toast('Connected to VLC' + (V.version ? ' ' + V.version : ''));
+  } catch (e) {
+    V.ok = false;
+    V.err = e instanceof TypeError ? `Can’t reach the bridge at ${vlcBase()}. Start it with the command below, then try again.` : e.message;
+    if (!quiet) toast('VLC isn’t connected yet');
+  }
+  V.busy = false; render(); return V.ok;
+}
+const vlcFail = e => { V.ok = false; V.err = e instanceof TypeError ? `Lost the connection to the bridge at ${vlcBase()}.` : e.message; toast('VLC didn’t respond'); render(); };
+async function vlcPlay(item, start) {
+  if (!V.ok && !(await vlcConnect(true))) { P.playing = false; S.view = 'player'; render(); return; }
+  try {
+    await vlc('in_play', { input: item.url, ...(start > 1 ? { option: 'start-time=' + Math.floor(start) } : {}) });
+    await vlc('volume', { val: Math.round((P.muted ? 0 : P.vol) * 256) });
+    if (P.rate !== 1) await vlc('rate', { val: P.rate });
+  } catch (e) { vlcFail(e); }
+}
+setInterval(async () => {
+  if (!vlcOn() || !P.item || !V.ok || document.hidden) return;
+  try {
+    const j = await vlc('');
+    const was = V.state; V.state = j.state;
+    if (j.length > 0) { P.dur = j.length; P.live = false; }
+    P.pos = j.length > 0 && j.position ? j.position * j.length : (j.time || 0);
+    const playing = j.state === 'playing';
+    const t = j.information?.category?.meta?.title;
+    if (t && /^(YouTube (video|playlist)|Video)$/.test(P.item.title)) { P.item.title = t; render(); }
+    if (was === 'playing' && j.state === 'stopped' && P.dur && P.pos >= P.dur - 3) { onEnded(); return; }
+    if (playing !== P.playing) { P.playing = playing; tick(true); } else tick();
+  } catch (e) { if (V.ok) vlcFail(e); }
+}, 1000);
+const send = (cmd, params) => vlcOn() && vlc(cmd, params).catch(vlcFail);
+
+/* Open in the VLC app (phones) or desktop VLC (.m3u playlist / Open Network Stream) */
+const isAndroid = /Android/i.test(navigator.userAgent), isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+function vlcAppLink(url, title) {
+  if (isAndroid) { const u = new URL(url); return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=${u.protocol.slice(0, -1)};package=org.videolan.vlc;type=video/*;S.title=${encodeURIComponent(title)};end`; }
+  if (isIOS) return 'vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(url);
+  return '';
+}
+function m3uFor(items) {
+  return '#EXTM3U\n' + items.map(m => `#EXTINF:${Math.round(m.duration || -1)},${String(m.title).replace(/[\r\n]/g, ' ')}\n${m.start || m.pos > 5 ? '#EXTVLCOPT:start-time=' + Math.floor(m.pos > 5 ? m.pos : m.start) + '\n' : ''}${m.url}`).join('\n') + '\n';
+}
+function saveM3u(items, name) {
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([m3uFor(items)], { type: 'audio/x-mpegurl' }));
+    a.download = name.replace(/[^\w .-]+/g, '').trim().slice(0, 60) + '.m3u';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Playlist saved. Open it with VLC.');
+  } catch { toast('Saving isn’t allowed here. Copy the link instead.'); }
+}
+let vlcSheetItem = null;
+function openVlcSheet(item) {
+  vlcSheetItem = item;
+  const app = vlcAppLink(item.url, item.title);
+  scrim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="vlcTitle">
+    <header><h2 id="vlcTitle">Open in VLC</h2><button class="icon-btn" data-act="closeDev" aria-label="Close">${icon('x')}</button></header>
+    <div class="scan" style="display:block"><b style="color:var(--fg)">${esc(item.title)}</b><br><code>${esc(item.url)}</code></div>
+    ${app ? `<div class="opt"><b>VLC app on this ${isIOS ? 'iPhone or iPad' : 'phone'}</b>Plays it in VLC, which handles almost every format. Install VLC first if you don’t have it.
+      <span class="actions"><a class="btn primary sm" href="${esc(app)}">${icon('vlc')}Open in VLC</a></span></div>` : ''}
+    <div class="opt"><b>VLC on this computer</b>Save a playlist and open it with VLC, or in VLC choose Media → Open Network Stream (<kbd>Ctrl</kbd> + <kbd>N</kbd>, <kbd>⌘</kbd> + <kbd>N</kbd> on Mac) and paste the link.
+      <span class="actions"><button class="btn sm" data-act="vlcM3u">${icon('upload')}Save .m3u playlist</button><button class="btn sm" data-act="vlcCopy">${icon('copy')}Copy link</button></span></div>
+    <div class="opt"><b>Cast to VLC</b>Send it to VLC on a computer connected to your TV and use this app as the remote.
+      <span class="actions"><button class="btn sm" data-act="vlcSend">${icon('cast')}Cast to VLC</button></span></div>
+  </div>`;
+  scrim.hidden = false;
+  scrim.querySelector('.sheet button, .sheet a')?.focus();
+}
 video.addEventListener('ended', () => onEnded());
 
 function playItem(item, opts = {}) {
@@ -617,9 +728,11 @@ function playItem(item, opts = {}) {
   P.playing = true;
   if (P.real) video.play().catch(() => {});
   if (P.yt) ytLoad(it, P.pos);
+  if (vlcOn()) vlcPlay(it, P.pos);
+  else if (S.device === 'vlc') toast('VLC can’t open files from the browser. Playing here instead.');
   logHistory();
   if (!S.device) { openDevices(); toast('Choose a screen to cast to'); }
-  else toast(`Casting “${it.title}” to ${devName()}`);
+  else if (S.device !== 'vlc' || vlcOn()) toast(`Casting “${it.title}” to ${devName()}`);
   if (S.device === 'remote' && !P.yt) promptRemote();
   S.view = 'player';
   render();
@@ -629,6 +742,7 @@ function toggle() {
   P.playing = !P.playing;
   if (P.real) P.playing ? video.play().catch(() => {}) : video.pause();
   if (ytOn()) P.playing ? Y.player.playVideo() : Y.player.pauseVideo();
+  send(P.playing ? 'pl_forceresume' : 'pl_forcepause');
   tick(true);
 }
 function seek(t) {
@@ -636,6 +750,7 @@ function seek(t) {
   P.pos = Math.max(0, Math.min(P.dur || 0, t));
   if (P.real) video.currentTime = P.pos;
   if (ytOn()) Y.player.seekTo(P.pos, true);
+  send('seek', { val: Math.floor(P.pos) });
   tick(true);
 }
 function stop() {
@@ -645,6 +760,7 @@ function stop() {
   video.pause(); video.removeAttribute('src'); video.load();
   if (Y.player && Y.ready) { try { Y.player.stopVideo(); } catch {} }
   P.yt = null; Y.key = '';
+  send('pl_stop'); P.ext = '';
   render();
 }
 function next() {
@@ -668,6 +784,7 @@ setInterval(() => {
   if (P.real) { P.pos = video.currentTime; }
   else if (ytOn()) { P.pos = Y.player.getCurrentTime() || 0; const d = Y.player.getDuration(); if (d && !P.live) P.dur = d; }
   else if (P.yt && P.ytState !== 'blocked') { /* waiting on YouTube */ }
+  else if (vlcOn()) { if (V.ok) P.pos = Math.min(P.dur || Infinity, P.pos + .25 * P.rate); }
   else {
     P.pos += .25 * P.rate;
     if (!P.live && P.dur && P.pos >= P.dur) { P.pos = P.dur; onEnded(); return; }
@@ -779,7 +896,7 @@ const GUIDES = [
 ].sort((a, b) => b.you - a.you);
 
 /* ---------- Sniffer ---------- */
-const MEDIA_RE = /(?:https?:)?\/\/[^\s"'<>()]+?\.(?:mp4|m4v|webm|mov|mkv|m3u8|mpd|mp3|m4a)(?:\?[^\s"'<>()]*)?/gi;
+const MEDIA_RE = /(?:https?:)?\/\/[^\s"'<>()]+?\.(?:mp4|m4v|webm|mov|mkv|avi|flv|wmv|ts|m3u8|mpd|mp3|m4a)(?:\?[^\s"'<>()]*)?/gi;
 async function browse(raw) {
   let url = raw.trim(); if (!url) return;
   if (!/^[a-z]+:/i.test(url)) url = (/\s/.test(url) || !/\./.test(url)) ? 'https://duckduckgo.com/?q=' + encodeURIComponent(url) : 'https://' + url;
@@ -795,7 +912,7 @@ async function browse(raw) {
     S.detected = []; S.notice = { text: 'Open a video on YouTube, tap Share → Copy link, and paste the link here.', link: url }; return render();
   }
   if (fmtOf(url) !== 'MP4' || /\.(mp4|m4v)(\?|$)/i.test(url)) {
-    if (/\.(mp4|m4v|webm|mov|mkv|m3u8|mpd|mp3|m4a)(\?|$)/i.test(url)) {
+    if (/\.(mp4|m4v|webm|mov|mkv|avi|flv|wmv|ts|m3u8|mpd|mp3|m4a)(\?|$)/i.test(url)) {
       const name = decodeURIComponent(url.split('?')[0].split('/').pop()).replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
       S.detected = [{ id: uid(), title: name || 'Video', url, res: fmtOf(url) === 'HLS' ? 'Auto' : '—', size: '—', duration: 0, source: 'Direct link' }];
       S.notice = { ok: true, text: 'Direct video link. Ready to cast.' };
@@ -856,14 +973,15 @@ function mediaRow(m, actions, extra = '') {
   const playing = P.item && P.item.url === m.url;
   return `<div class="row ${playing ? 'playing' : ''}" data-id="${m.id}">${extra}${thumb(m)}
     <div class="meta"><div class="t">${esc(m.title)}</div>
-      <div class="s"><span class="chip fmt-${f}">${f}</span>${m.live ? '<span class="chip live">LIVE</span>' : ''}${m.res && m.res !== '—' ? `<span>${esc(m.res)}</span>` : ''}${m.size && m.size !== '—' ? `<span>· ${esc(m.size)}</span>` : ''}${playing ? '<span style="color:var(--accent);font-weight:700">· Now casting</span>' : ''}</div>
+      <div class="s"><span class="chip fmt-${f}">${f}</span>${m.live ? '<span class="chip live">LIVE</span>' : ''}${NEEDS_VLC.includes(f) ? '<span class="chip vlc">VLC</span>' : ''}${m.res && m.res !== '—' ? `<span>${esc(m.res)}</span>` : ''}${m.size && m.size !== '—' ? `<span>· ${esc(m.size)}</span>` : ''}${playing ? '<span style="color:var(--accent);font-weight:700">· Now casting</span>' : ''}</div>
       <div class="u">${esc(m.url.startsWith('blob:') ? (m.fileName || 'Local file') : m.url)}</div></div>
     <div class="actions">${actions}</div></div>`;
 }
 const A = {
   cast: '<button class="btn primary sm" data-act="cast">' + icon('cast') + 'Cast</button>',
   queue: '<button class="btn sm" data-act="enqueue" title="Add to queue" aria-label="Add to queue">' + icon('plus') + 'Queue</button>',
-  copy: '<button class="icon-btn" data-act="copy" title="Copy link" aria-label="Copy link">' + icon('copy') + '</button>'
+  copy: '<button class="icon-btn" data-act="copy" title="Copy link" aria-label="Copy link">' + icon('copy') + '</button>',
+  vlc: '<button class="icon-btn" data-act="vlc" title="Open in VLC" aria-label="Open in VLC">' + icon('vlc') + '</button>'
 };
 
 const views = {
@@ -881,7 +999,7 @@ const views = {
     </form>
     <section class="panel"><div class="panel-h"><h2>Videos on this page</h2><span class="chip">${S.detected.length}</span><div class="grow"></div>
       ${S.detected.length > 1 ? '<button class="btn ghost sm" data-act="queueAll">' + icon('list') + 'Queue all</button>' : ''}</div>
-      <div class="list" data-list="detected">${S.detected.length ? S.detected.map(m => mediaRow(m, A.copy + A.queue + A.cast)).join('') : '<div class="empty"><b>No videos yet</b>Open a page or paste a direct link.</div>'}</div></section>
+      <div class="list" data-list="detected">${S.detected.length ? S.detected.map(m => mediaRow(m, A.copy + A.vlc + A.queue + A.cast)).join('') : '<div class="empty"><b>No videos yet</b>Open a page or paste a direct link.</div>'}</div></section>
     <section><div class="eyebrow" style="margin-bottom:10px">Start page</div><div class="sites">
       ${SITES.map(s => `<button class="site" data-site="${s.id}"><b>${esc(s.name)}</b><span>${esc(s.blurb)}</span><small>${esc(s.url)}</small></button>`).join('')}
     </div></section>`;
@@ -894,7 +1012,7 @@ const views = {
     return `<div class="view-head"><div class="grow"><div class="eyebrow">${dev ? 'Casting to ' + esc(dev.name) : 'Not connected'}</div><h1>Remote</h1></div>
       <button class="btn" data-act="devices">${icon('cast')}${dev ? 'Change screen' : 'Connect'}</button></div>
     ${M.stream ? `<div class="notice bad" style="margin:0">Your screen is being mirrored. Playing a video stops the mirror. <button class="btn ghost sm" data-act="openMirror">Go to mirroring</button></div>` : ''}
-    ${P.yt ? ytNotice() : ''}
+    ${P.yt ? ytNotice() : ''}${vlcPanel()}
     <div class="np">
       <div class="tv"><div class="screen ${it ? '' : 'idle'}" id="screen"></div>
         <div class="tv-foot"><span>${dev ? icon(dev.icon) + ' ' + esc(dev.kind) : 'No screen connected'}</span><span class="mono" id="srcState"></span></div></div>
@@ -963,7 +1081,7 @@ const views = {
 
   queue() {
     return `<div class="view-head"><div class="grow"><div class="eyebrow">Play queue</div><h1>Up next</h1><p>Videos play in this order on ${esc(devName())}.</p></div>
-      ${S.queue.length ? '<button class="btn" data-act="clearQueue">' + icon('x') + 'Clear</button><button class="btn primary" data-act="next">' + icon('play') + 'Play next</button>' : ''}</div>
+      ${S.queue.length ? '<button class="btn" data-act="clearQueue">' + icon('x') + 'Clear</button><button class="btn" data-act="queueM3u">' + icon('vlc') + 'Save for VLC</button><button class="btn primary" data-act="next">' + icon('play') + 'Play next</button>' : ''}</div>
     <section class="panel"><div class="list" data-list="queue">${S.queue.length ? S.queue.map((m, i) => mediaRow(m,
       `<button class="icon-btn" data-act="up" aria-label="Move up" ${i ? '' : 'disabled'}>${icon('up')}</button><button class="icon-btn" data-act="down" aria-label="Move down" ${i < S.queue.length - 1 ? '' : 'disabled'}>${icon('down')}</button><button class="icon-btn" data-act="remove" aria-label="Remove">${icon('x')}</button>${A.cast}`,
       `<span class="qnum">${i + 1}</span>`).replace('class="row ', 'class="row q ')).join('') : '<div class="empty"><b>The queue is empty</b>Use “Queue” on any video to line it up.</div>'}</div></section>`;
@@ -1029,6 +1147,8 @@ const views = {
     </section>
     <section class="panel">
       <div class="panel-h"><h2>Devices</h2></div>
+      <div class="set"><div><b>Suggest VLC for unsupported videos</b><span>Offers VLC when a format such as MKV, AVI or DASH won’t play in the browser.</span></div>${sw('s-vlcFallback', st.vlcFallback)}</div>
+      <div class="set"><div><b>VLC bridge address</b><span>Where vlc-bridge.mjs runs. Leave empty to use ${esc(vlcBase())}.</span></div><input id="s-vlcBridge" value="${esc(st.vlcBridge)}" placeholder="http://localhost:8090" style="width:min(240px,100%);height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);font:13px var(--f-mono)"></div>
       <div class="set"><div><b>Show demo devices</b><span>Simulated Chromecast, Roku, Fire TV, DLNA and AirPlay receivers for trying the app. “Nearby screen” uses your browser’s real casting.</span></div>${sw('s-demo', st.demo)}</div>
     </section>`;
   }
@@ -1038,6 +1158,27 @@ function ytLink() {
   const y = P.yt; if (!y) return '';
   return y.id ? `https://www.youtube.com/watch?v=${y.id}${y.list ? '&list=' + y.list : ''}${P.pos > 5 ? '&t=' + Math.floor(P.pos) + 's' : ''}` : ytUrl(y);
 }
+function vlcPanel() {
+  if (S.device === 'vlc' && !V.ok) {
+    const pw = 'choose-a-password';
+    return `<section class="panel yt-tv"><h2>${icon('vlc')} Connect VLC</h2>
+      ${V.err ? `<div class="notice bad" style="margin:0">${esc(V.err)}</div>` : ''}
+      <ol class="vlc-steps">
+        <li><b>Turn on VLC’s web interface.</b> In VLC: Tools → Preferences → Show settings: <b>All</b> → Interface → Main interfaces → tick <b>Web</b>. Then under Main interfaces → Lua, set a password. Restart VLC. Or start it with <code>vlc --extraintf http --http-password ${pw}</code></li>
+        <li><b>Start the bridge</b> on the same computer: <code>VLC_PASSWORD=${pw} node web-video-caster/vlc-bridge.mjs</code>. Add <code>BIND=0.0.0.0</code> to use your phone as the remote.</li>
+        <li><b>Open StreamBeam from the bridge</b> at <code>http://localhost:8090</code>, or <code>http://&lt;computer-ip&gt;:8090</code> on your phone.</li>
+      </ol>
+      <div class="bridge"><input id="vlcBridge" value="${esc(S.settings.vlcBridge)}" placeholder="${esc(vlcBase())}" aria-label="Bridge address"><button class="btn primary" data-act="vlcConnect" ${V.busy ? 'disabled' : ''}>${V.busy ? 'Connecting…' : 'Connect to VLC'}</button></div>
+    </section>`;
+  }
+  const it = P.item;
+  if (!it || vlcOn() || P.yt || !S.settings.vlcFallback) return '';
+  const f = fmtOf(it.url);
+  if (!(NEEDS_VLC.includes(f) || P.vidErr)) return '';
+  return `<div class="notice" style="margin:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px">${P.vidErr ? 'The browser couldn’t decode this video.' : `Browsers can’t play ${f} on their own.`} VLC plays it, with every codec built in.</span>
+    <button class="btn sm" data-act="vlc">${icon('vlc')}Open in VLC</button>${canVlc(it.url) ? `<button class="btn primary sm" data-act="vlcUse">${icon('cast')}Cast to VLC</button>` : ''}</div>`;
+}
+
 function ytNotice() {
   const msg = {
     loading: ['', 'Loading the YouTube player…'],
@@ -1172,11 +1313,16 @@ scrim.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.act === 'closeDev') scrim.hidden = true;
   else if (b.dataset.act === 'rescan') openDevices();
+  else if (b.dataset.act === 'vlcCopy') { navigator.clipboard.writeText(vlcSheetItem.url).then(() => toast('Link copied. Paste it in VLC.'), () => toast('Copy blocked. Select the link above.')); }
+  else if (b.dataset.act === 'vlcM3u') saveM3u([vlcSheetItem], vlcSheetItem.title);
+  else if (b.dataset.act === 'vlcSend') { scrim.hidden = true; S.device = 'vlc'; save(); if (canVlc(vlcSheetItem.url)) playItem(vlcSheetItem); else toast('VLC can’t open files from the browser'); }
   else if (b.dataset.act === 'mirrorFromSheet') { scrim.hidden = true; S.view = 'mirror'; render(); }
   else if (b.dataset.act === 'disconnect') { S.device = ''; save(); scrim.hidden = true; toast('Disconnected'); render(); }
   else if ('dev' in b.dataset) {
     S.device = b.dataset.dev; save(); scrim.hidden = true;
-    if (S.device === 'remote') promptRemote(); else toast(S.device ? `Connected to ${devName()}` : 'Playing on this device');
+    if (S.device === 'remote') promptRemote();
+    else if (S.device === 'vlc') { vlcConnect().then(ok => { if (ok && P.item && canVlc(P.item.url)) playItem(P.item, { from: P.pos }); }); S.view = 'player'; }
+    else toast(S.device ? `Connected to ${devName()}` : 'Playing on this device');
     render();
   }
 });
@@ -1230,7 +1376,11 @@ document.addEventListener('click', async e => {
     case 'fwd': seek(P.pos + S.settings.skip); break;
     case 'stop': stop(); toast('Stopped casting'); break;
     case 'next': next(); break;
-    case 'mute': P.muted = !P.muted; video.muted = P.muted; if (ytOn()) P.muted ? Y.player.mute() : Y.player.unMute(); render(); break;
+    case 'mute': P.muted = !P.muted; video.muted = P.muted; if (ytOn()) P.muted ? Y.player.mute() : Y.player.unMute(); send('volume', { val: P.muted ? 0 : Math.round(P.vol * 256) }); render(); break;
+    case 'vlc': openVlcSheet(ctx.item || P.item); break;
+    case 'vlcConnect': S.settings.vlcBridge = ($('#vlcBridge')?.value || '').trim(); save(); vlcConnect(); break;
+    case 'vlcUse': S.device = 'vlc'; save(); if (P.item) playItem(P.item, { from: P.pos }); else vlcConnect(); break;
+    case 'queueM3u': saveM3u(S.queue, 'StreamBeam queue'); break;
     case 'ytMirror': S.view = 'mirror'; M.surface = 'browser'; saveMirror(); render(); break;
     case 'ytCopy': try { await navigator.clipboard.writeText(ytLink()); toast('YouTube link copied'); } catch { toast('Copy blocked. Use Open in YouTube instead.'); } break;
     case 'subs': if (P.subName) { P.subs = null; P.subName = ''; render(); } else $('#subFile').click(); break;
@@ -1258,7 +1408,7 @@ document.addEventListener('submit', e => {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'seek') { t.style.setProperty('--p', (t.value / t.max * 100) + '%'); $('#tPos').textContent = fmt(+t.value); }
-  if (t.id === 'vol') { P.vol = t.value / 100; P.muted = P.vol === 0; video.volume = P.vol; video.muted = P.muted; if (ytOn()) { Y.player.setVolume(+t.value); P.muted ? Y.player.mute() : Y.player.unMute(); } t.style.setProperty('--p', t.value + '%'); $('#volTxt').textContent = t.value; }
+  if (t.id === 'vol') { P.vol = t.value / 100; P.muted = P.vol === 0; video.volume = P.vol; video.muted = P.muted; if (ytOn()) { Y.player.setVolume(+t.value); P.muted ? Y.player.mute() : Y.player.unMute(); } clearTimeout(V.volT); V.volT = setTimeout(() => send('volume', { val: Math.round(P.vol * 256) }), 150); t.style.setProperty('--p', t.value + '%'); $('#volTxt').textContent = t.value; }
   if (t.id === 'chSearch') { S.chSearch = t.value; const pos = t.selectionStart; render(); const n = $('#chSearch'); n.focus(); n.setSelectionRange(pos, pos); }
 });
 document.addEventListener('change', async e => {
@@ -1269,10 +1419,11 @@ document.addEventListener('change', async e => {
     M[k] = t.type === 'checkbox' ? t.checked : (k === 'fps' ? +t.value : t.value);
     saveMirror(); if (k === 'audio') render();
   }
-  if (t.id === 'rate') { P.rate = +t.value; video.playbackRate = P.rate; if (ytOn()) Y.player.setPlaybackRate(P.rate); }
+  if (t.id === 'rate') { P.rate = +t.value; video.playbackRate = P.rate; if (ytOn()) Y.player.setPlaybackRate(P.rate); send('rate', { val: P.rate }); }
   if (t.id?.startsWith('s-')) {
     const k = t.id.slice(2);
-    S.settings[k] = t.type === 'checkbox' ? t.checked : (k === 'skip' ? +t.value : t.value);
+    S.settings[k] = t.type === 'checkbox' ? t.checked : (k === 'skip' ? +t.value : k === 'vlcBridge' ? t.value.trim() : t.value);
+    if (k === 'vlcBridge') V.ok = false;
     if (k === 'demo' && !t.checked && S.device && S.device !== 'remote') S.device = '';
     save(); toast('Saved'); render();
   }
@@ -1295,6 +1446,7 @@ function addFiles(files) {
 /* ---------- Boot: open in a realistic working state ---------- */
 load({ ...SITES[0].media[0], id: uid() }, 134);
 render();
+if (S.device === 'vlc') vlcConnect(true);
 })();
 </script>
 <!-- APP-END -->
