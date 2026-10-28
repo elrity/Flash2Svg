@@ -6,6 +6,39 @@ Trusted Web Activity: the phone's Chrome runs the page, so casting, YouTube
 and Gemini work exactly as on the web, and every server update reaches the
 app without reinstalling.
 
+## Build it in Android Studio (Mac, Windows or Linux)
+
+1. Install [Android Studio](https://developer.android.com/studio) and
+   [Node.js](https://nodejs.org) (for the one-line setup step).
+2. Get the project and point it at your hosted StreamBeam:
+   ```sh
+   git clone -b claude/web-video-caster-app-uebeye https://github.com/elrity/Flash2Svg
+   cd Flash2Svg/android
+   node configure.mjs https://streambeam-xxxx.onrender.com
+   ```
+   Run `configure.mjs` again whenever the address changes.
+3. Android Studio → **Open** → choose the `Flash2Svg/android` folder. The
+   first sync downloads Gradle and the Android SDK parts it needs (a few
+   minutes). If it offers to upgrade the Android Gradle plugin, that's fine.
+4. **Try it on your phone**: on the phone, Settings → About phone → tap
+   *Build number* 7 times, then Settings → Developer options → turn on
+   *USB debugging*. Plug it into the Mac, accept the prompt on the phone, pick
+   it in the device list at the top of Android Studio and press **Run ▶**.
+5. **Make the APK to keep and share**: Build → **Generate Signed App Bundle or
+   APK** → *APK* → *Create new…* keystore (save it somewhere safe, e.g.
+   `~/streambeam.jks`, alias `streambeam`) → *release* → Create. The APK is
+   in `android/app/release/app-release.apk`; send it to the phone (Google
+   Drive, email, USB) and open it there.
+6. **Hide the browser bar**: get the key's fingerprint and set it on the
+   server as `ANDROID_CERT_SHA256` (Render → Environment):
+   ```sh
+   keytool -list -v -keystore ~/streambeam.jks -alias streambeam | grep SHA256
+   ```
+
+Use the same keystore for every build so updates install over the old app.
+To let GitHub Actions sign with it too, add it as the secrets described in
+*Keep one signing key* below.
+
 ## Build the APK (GitHub Actions)
 
 1. Host StreamBeam first (see `web-video-caster/README.md`, e.g. Render) and
@@ -45,17 +78,18 @@ Keep `streambeam.jks` safe: losing it means users must reinstall. Then update
 
 ## Build locally
 
-Needs JDK 17, Gradle 8.9+ and the Android SDK (`ANDROID_HOME`):
+Needs JDK 17+ and the Android SDK (`ANDROID_HOME`); the Gradle wrapper fetches Gradle:
 
 ```sh
 cd android
 node configure.mjs https://streambeam-xxxx.onrender.com
-gradle assembleRelease   # app/build/outputs/apk/release/app-release.apk
+./gradlew assembleRelease   # app/build/outputs/apk/release/app-release.apk
 ```
 
 ## Google Play
 
-Play needs an Android App Bundle: run `gradle bundleRelease` with your own
+Play needs an Android App Bundle: run `./gradlew bundleRelease` (or choose
+*Android App Bundle* in Android Studio's Generate Signed wizard) with your own
 key, then upload `app/build/outputs/bundle/release/app-release.aab` in Play
 Console. Play signs the app with its own key, so add Play's "App signing key"
 SHA-256 to `ANDROID_CERT_SHA256` too (comma-separated).
